@@ -4,24 +4,31 @@ import {
   useMaterialReactTable,
   type MRT_ColumnDef,
 } from "material-react-table";
-import { data, type Indicatior } from "./SelectedIndicatorsData";
+import { type Indicatior } from "./SelectedIndicatorsData";
+import useFetchData from "./SelectedIndicatorsData";
 
-import { Typography, Box, Button } from "@mui/material";
+import { Typography, Box, Button, CircularProgress } from "@mui/material";
 const SelectedIndicators = () => {
   const [toggle, setToggle] = useState(false);
+  const { data, loading } = useFetchData();
+  const editedData = useMemo(
+    () =>
+      data.map((item) => {
+        const value =
+          typeof item.value === "number" ? item.value : parseFloat(item.value);
+        let valueFormatted = value.toString();
 
-  const editedData = data.map((item) => {
-    if (item.value / 1000000000 > 1)
-      return { ...item, value: item.value / 1000000000 + "B" };
-    else if (item.value / 1000000 > 1)
-      return { ...item, value: item.value / 1000000 + "M" };
-    else if (item.value / 1000 > 1)
-      return { ...item, value: item.value / 1000 + "K" };
-    else return item;
-  });
-
-  console.log("Data", editedData);
-  console.log("data", data);
+        if (value / 1000000000 > 1) {
+          valueFormatted = (value / 1000000000).toFixed(2) + "B";
+        } else if (value / 1000000 > 1) {
+          valueFormatted = (value / 1000000).toFixed(2) + "M";
+        } else if (value / 1000 > 1) {
+          valueFormatted = (value / 1000).toFixed(2) + "K";
+        }
+        return { ...item, value: valueFormatted };
+      }),
+    [data]
+  );
 
   const columns = useMemo<MRT_ColumnDef<Indicatior>[]>(
     () => [
@@ -41,6 +48,13 @@ const SelectedIndicators = () => {
       {
         accessorKey: "change",
         header: "تغییر",
+        Cell: ({ cell }) => (
+          <span
+            style={{ color: cell.getValue<number>() < 0 ? "red" : "green" }}
+          >
+            {cell.getValue<number>()}
+          </span>
+        ),
       },
       {
         accessorKey: "theMost",
@@ -52,9 +66,13 @@ const SelectedIndicators = () => {
 
   const table = useMaterialReactTable({
     columns,
-    data,
+    data: editedData,
     enableColumnOrdering: true,
   });
+
+  if (loading) {
+    return <CircularProgress />;
+  }
 
   return (
     <>
